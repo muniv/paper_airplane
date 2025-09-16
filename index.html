@@ -266,8 +266,8 @@
                 <span class="stat-value" id="best-distance">0m</span>
             </div>
             <div class="stat-item">
-                <span class="stat-label">현재 높이</span>
-                <span class="stat-value" id="current-height">옥상</span>
+                <span class="stat-label">현재 장소</span>
+                <span class="stat-value" id="current-location">옥상</span>
             </div>
         </div>
 
@@ -687,17 +687,17 @@
             });
             document.getElementById(`bg-${bgName === '옥상_노을' ? 'rooftop' : bgName === '바다' ? 'sea' : 'office'}`).classList.add('active');
 
-            // 높이 정보 업데이트
-            const heightElement = document.getElementById('current-height');
+            // 장소 정보 업데이트
+            const locationElement = document.getElementById('current-location');
             switch(bgName) {
                 case '옥상_노을':
-                    heightElement.textContent = '옥상';
+                    locationElement.textContent = '옥상';
                     break;
                 case '바다':
-                    heightElement.textContent = '해변';
+                    locationElement.textContent = '해변';
                     break;
                 case '사무실':
-                    heightElement.textContent = '사무실';
+                    locationElement.textContent = '사무실';
                     break;
             }
         }
@@ -708,57 +708,17 @@
                 // 이미지를 캔버스 전체에 맞춤
                 ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
             } else {
-                // 기본 배경 (이미지 로드 실패시)
-                const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.4);
-                skyGradient.addColorStop(0, '#FF6B6B');
-                skyGradient.addColorStop(0.3, '#FFB347');
-                skyGradient.addColorStop(0.6, '#FFCC99');
-                skyGradient.addColorStop(1, '#87CEEB');
-                ctx.fillStyle = skyGradient;
-                ctx.fillRect(0, 0, canvas.width, canvas.height * 0.4);
+                // 기본 배경 (이미지 로드 실패시 - 흰색 배경)
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                // 구름 그리기
-                drawClouds();
-
-                // 옥상과 도시 배경 (더 낮게)
-                const groundGradient = ctx.createLinearGradient(0, canvas.height * 0.6, 0, canvas.height);
-                groundGradient.addColorStop(0, '#8B7355');
-                groundGradient.addColorStop(0.1, '#A0826D');
-                groundGradient.addColorStop(0.3, '#6B5B45');
-                groundGradient.addColorStop(1, '#4A4035');
-                ctx.fillStyle = groundGradient;
-                ctx.fillRect(0, canvas.height * 0.6, canvas.width, canvas.height * 0.4);
-
-                // 옥상 타일 패턴
-                ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
-                ctx.lineWidth = 1;
-
-                // 옥상 영역에만 타일 (더 아래쪽에)
-                for (let x = 0; x < canvas.width; x += 40) {
-                    ctx.beginPath();
-                    ctx.moveTo(x, canvas.height * 0.65);
-                    ctx.lineTo(x, canvas.height);
-                    ctx.stroke();
-                }
-
-                for (let y = canvas.height * 0.65; y < canvas.height; y += 40) {
-                    ctx.beginPath();
-                    ctx.moveTo(0, y);
-                    ctx.lineTo(canvas.width, y);
-                    ctx.stroke();
-                }
-
-                // 옥상 난간
-                ctx.fillStyle = '#666';
-                ctx.fillRect(0, canvas.height * 0.62, canvas.width, 5);
-                ctx.fillRect(0, canvas.height * 0.62, 5, canvas.height);
-                ctx.fillRect(canvas.width - 5, canvas.height * 0.62, 5, canvas.height);
-
-                // 도시 스카이라인 (멀리 보이는 건물들)
-                drawDistantCity();
-
-                // 옥상 위 오브젝트들
-                drawRooftopObjects();
+                // 간단한 구름 몇 개만 표시
+                ctx.fillStyle = 'rgba(220, 220, 220, 0.8)';
+                ctx.beginPath();
+                ctx.arc(canvas.width * 0.2, 100, 50, 0, Math.PI * 2);
+                ctx.arc(canvas.width * 0.7, 120, 40, 0, Math.PI * 2);
+                ctx.arc(canvas.width * 0.9, 80, 35, 0, Math.PI * 2);
+                ctx.fill();
             }
         }
 
