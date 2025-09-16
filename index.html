@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🕊️ 종이비행기 - 옥상의 여유</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Nanum Gothic', sans-serif;
+            overflow: hidden;
+            background: linear-gradient(to bottom,
+                #FFB347 0%,    /* 노을 오렌지 */
+                #FFCC99 20%,   /* 연한 노을 */
+                #87CEEB 50%,   /* 하늘색 */
+                #B0E0E6 100%   /* 연한 하늘 */
+            );
+            height: 100vh;
+            position: relative;
+        }
+
+        #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .ui-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 320px;
+            z-index: 10;
+        }
+
+        .title {
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 15px;
+        }
+
+        #webcam-container {
+            width: 280px;
+            height: 210px;
+            margin: 0 auto 15px;
+            border-radius: 15px;
+            overflow: hidden;
+            background: #f0f0f0;
+            position: relative;
+        }
+
+        #webcam-container canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .gesture-display {
+            text-align: center;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin: 10px 0;
+            transition: all 0.3s ease;
+        }
+
+        .gesture-ready {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .gesture-throw {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            animation: pulse 0.5s;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .stats {
+            background: rgba(240, 240, 240, 0.8);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 1.1em;
+        }
+
+        .stat-label {
+            color: #666;
+        }
+
+        .stat-value {
+            color: #333;
+            font-weight: bold;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            color: white;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+
+        .instruction-item {
+            margin: 8px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .instruction-item:before {
+            content: "✈️";
+            position: absolute;
+            left: 0;
+        }
+
+        .floating-message {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(240, 248, 255, 0.9));
+            padding: 25px 45px;
+            border-radius: 25px;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: 500;
+            color: #4A5568;
+            z-index: 20;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.8s ease;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+            transform: translate(-50%, -50%) scale(0.8);
+            max-width: 500px;
+            min-width: 400px;
+            line-height: 1.4;
+            white-space: nowrap;
+        }
+
+        .floating-message.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .background-selector {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(240, 240, 240, 0.8);
+            border-radius: 10px;
+        }
+
+        .bg-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .bg-btn {
+            padding: 10px 12px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            color: #495057;
+            font-size: 0.9em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+
+        .bg-btn:hover {
+            background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+            transform: translateY(-1px);
+        }
+
+        .bg-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="ui-container">
+        <h2 class="title">🕊️ 종이비행기 날리기</h2>
+
+        <div id="webcam-container"></div>
+
+        <div class="gesture-display gesture-ready" id="gesture-status">
+            카메라를 시작하세요
+        </div>
+
+        <div class="stats">
+            <div class="stat-item">
+                <span class="stat-label">날린 비행기</span>
+                <span class="stat-value" id="plane-count">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">최고 거리</span>
+                <span class="stat-value" id="best-distance">0m</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">현재 높이</span>
+                <span class="stat-value" id="current-height">옥상</span>
+            </div>
+        </div>
+
+        <button class="btn-primary" onclick="startCamera()" id="camera-btn">
+            카메라 시작
+        </button>
+        <button class="btn-secondary" onclick="toggleMusic()" id="music-btn">
+            🎵 배경음악 ON
+        </button>
+
+        <div class="background-selector">
+            <h3 style="margin: 15px 0 10px 0; font-size: 1em; color: #555;">배경 선택</h3>
+            <div class="bg-options">
+                <button class="bg-btn active" onclick="changeBackground('옥상_노을')" id="bg-rooftop">
+                    🌅 옥상 노을
+                </button>
+                <button class="bg-btn" onclick="changeBackground('바다')" id="bg-sea">
+                    🌊 바다
+                </button>
+                <button class="bg-btn" onclick="changeBackground('사무실')" id="bg-office">
+                    🏢 사무실
+                </button>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <div class="instruction-item">주먹 쥐기: 종이비행기 준비</div>
+            <div class="instruction-item">손 펼치기: 비행기 날리기!</div>
+            <div class="instruction-item">파워를 모아서 멀리 날려보세요!</div>
+        </div>
+    </div>
+
+
+    <div class="floating-message" id="message">
+        <p id="message-text">멋진 비행이었어요!</p>
+    </div>
+
+    <!-- 배경음악 -->
+    <audio id="backgroundMusic" loop preload="auto" volume="0.3">
+        <source src="평화로운_날.mp3" type="audio/mpeg">
+        브라우저가 오디오를 지원하지 않습니다.
+    </audio>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+    <script>
+        // Canvas 설정
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Teachable Machine 설정
+        const URL = "https://teachablemachine.withgoogle.com/models/uklgO2TKm/";
+        let model, webcam, isModelReady = false;
+
+        // 게임 상태
+        let airplanes = [];
+        let birds = [];
+        let clouds = [];
+        let buildings = [];
+        let stars = [];
+        let planeCount = 0;
+        let bestDistance = 0;
+        let musicPlaying = false;
+
+        // 제스처 상태
+        let currentGesture = 'neutral';
+        let lastGesture = 'neutral';
+        let isHolding = false;
+        let holdPower = 0;
+
+        // 준비 중인 비행기
+        let readyPlane = null;
+
+        // 바람 제거됨
+
+        // 시간 (노을 효과)
+        let timeOfDay = 0.7; // 0: 밤, 0.5: 낮, 0.7: 노을
+
+        // 초기화
+        function init() {
+            createBuildings();
+            animate();
+        }
+
+        // 건물 생성 (위에서 본 모습)
+        function createBuildings() {
+            const rows = 8;
+            const cols = 6;
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const x = (canvas.width / cols) * col + Math.random() * 30;
+                    const y = (canvas.height / rows) * row + Math.random() * 30;
+                    const size = Math.random() * 60 + 40;
+
+                    buildings.push({
+                        x: x,
+                        y: y,
+                        size: size,
+                        height: Math.random() * 100 + 50,
+                        color: `hsl(210, 20%, ${30 + Math.random() * 20}%)`,
+                        roofColor: `hsl(20, 30%, ${40 + Math.random() * 20}%)`,
+                        windows: Math.random() > 0.3
+                    });
+                }
+            }
+        }
+
+        // 구름 생성
+        function createClouds() {
+            for (let i = 0; i < 8; i++) {
+                clouds.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * (canvas.height * 0.3),
+                    size: Math.random() * 40 + 30,
+                    speed: Math.random() * 0.3 + 0.1,
+                    opacity: Math.random() * 0.3 + 0.3
+                });
+            }
+        }
+
+        // 새 생성
+        function createBirds() {
+            for (let i = 0; i < 5; i++) {
+                birds.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * (canvas.height * 0.4),
+                    vx: Math.random() * 2 + 1,
+                    vy: Math.sin(Date.now() * 0.001) * 0.5,
+                    size: Math.random() * 5 + 3,
+                    wingPhase: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        // 별 생성
+        function createStars() {
+            for (let i = 0; i < 100; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * (canvas.height * 0.5),
+                    size: Math.random() * 2,
+                    twinkle: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        // 카메라 시작
+        async function startCamera() {
+            try {
+                document.getElementById('camera-btn').disabled = true;
+                document.getElementById('gesture-status').textContent = '모델 로딩 중...';
+
+                // 기존 모델 완전 제거
+                if (model) {
+                    model.dispose();
+                    model = null;
+                }
+
+                // 랜덤 캐시 버스터로 강제 새로 다운로드
+                const cacheBuster = Math.random().toString(36).substring(7) + Date.now();
+                const modelURL = URL + "model.json?v=" + cacheBuster;
+                const metadataURL = URL + "metadata.json?v=" + cacheBuster;
+
+                console.log('업데이트된 모델을 다시 로드 중...', modelURL);
+
+                // tmImage.load를 직접 사용 (CORS 문제 회피)
+                model = await tmImage.load(modelURL, metadataURL);
+
+                const flip = true;
+                webcam = new tmImage.Webcam(280, 210, flip);
+                await webcam.setup();
+                await webcam.play();
+
+                document.getElementById("webcam-container").appendChild(webcam.canvas);
+
+                isModelReady = true;
+                document.getElementById('gesture-status').textContent = '✋ 손을 보여주세요';
+
+                predictLoop();
+
+            } catch (error) {
+                console.error("카메라 시작 오류:", error);
+                document.getElementById('gesture-status').textContent = '오류 발생!';
+                document.getElementById('camera-btn').disabled = false;
+            }
+        }
+
+        // 제스처 예측
+        async function predictLoop() {
+            if (!isModelReady) return;
+
+            webcam.update();
+            const prediction = await model.predict(webcam.canvas);
+
+            let highestPrediction = { className: '', probability: 0 };
+            for (const pred of prediction) {
+                if (pred.probability > highestPrediction.probability) {
+                    highestPrediction = pred;
+                }
+            }
+
+            const gestureStatus = document.getElementById('gesture-status');
+
+            if (highestPrediction.probability > 0.7) {
+                const className = highestPrediction.className.toLowerCase();
+
+                if (className.includes('주먹')) {
+                    currentGesture = 'fist';
+
+                    if (!isHolding) {
+                        isHolding = true;
+                        holdPower = 0;
+
+                        // 종이비행기 준비 (옥상 위치에 맞춤)
+                        readyPlane = {
+                            x: canvas.width / 2,
+                            y: canvas.height - 80,
+                            size: 60,
+                            angle: 0,
+                            opacity: 1,
+                            wobble: 0
+                        };
+                    }
+
+                    // 파워 증가
+                    holdPower = Math.min(holdPower + 2, 100);
+
+                    gestureStatus.textContent = `✊ 준비! 파워: ${Math.floor(holdPower)}%`;
+                    gestureStatus.className = 'gesture-display gesture-ready';
+
+                } else if (className.includes('펼치기')) {
+
+                    if (isHolding && holdPower > 20 && readyPlane) {
+                        // 비행기 날리기!
+                        throwAirplane(holdPower);
+                        gestureStatus.textContent = '✋ 날렸어요!';
+                        gestureStatus.className = 'gesture-display gesture-throw';
+
+                        showMessage(getThrowMessage(holdPower));
+                    }
+
+                    currentGesture = 'open';
+                    isHolding = false;
+                    holdPower = 0;
+                    readyPlane = null;
+
+                    setTimeout(() => {
+                        if (currentGesture === 'open') {
+                            gestureStatus.textContent = '✋ 다시 주먹을 쥐어보세요';
+                            gestureStatus.className = 'gesture-display gesture-ready';
+                        }
+                    }, 1500);
+
+                } else {
+                    currentGesture = 'neutral';
+                    isHolding = false;
+                    holdPower = 0;
+                    readyPlane = null;
+                    gestureStatus.textContent = '👀 손을 보여주세요';
+                    gestureStatus.className = 'gesture-display gesture-ready';
+                }
+
+                lastGesture = currentGesture;
+            }
+
+            window.requestAnimationFrame(predictLoop);
+        }
+
+        // 비행기 날리기
+        function throwAirplane(power) {
+            if (!readyPlane) return;
+
+            const speed = (power / 100) * 8 + 4;
+            const direction = (Math.random() - 0.5) * Math.PI / 6; // -30도 ~ +30도로 줄임
+            const initialSway = (Math.random() - 0.5) * 1.5; // 초기 흔들림 줄임
+
+            airplanes.push({
+                x: readyPlane.x,
+                y: readyPlane.y,
+                z: 0,
+                vx: Math.sin(direction) * speed * 0.3 + initialSway, // 좌우 움직임 줄임
+                vy: -Math.cos(direction) * speed, // 앞으로 가는 속도는 유지
+                vz: speed * 0.4,
+                size: readyPlane.size,
+                trail: [],
+                distance: 0,
+                opacity: 1,
+                rotation: 0,
+                thrown: Date.now(),
+                launching: true,
+                // 부드러운 비행 패턴
+                swayPhase: Math.random() * Math.PI * 2,
+                swaySpeed: Math.random() * 0.03 + 0.01, // 속도 줄임
+                swayIntensity: Math.random() * 0.5 + 0.3, // 강도 줄임
+                spiralPhase: Math.random() * Math.PI * 2,
+                spiralSpeed: Math.random() * 0.02 + 0.005 // 속도 줄임
+            });
+
+            planeCount++;
+            document.getElementById('plane-count').textContent = planeCount;
+        }
+
+        // 던지기 메시지
+        function getThrowMessage(power) {
+            const messages = {
+                low: [
+                    "걱정을 실어 날려보내자 💭",
+                    "오늘도 고생했어, 이제 쉬어 🌸",
+                    "바쁘던 마음을 잘 날려보냈네 ✨"
+                ],
+                medium: [
+                    "스트레스를 날려보내고 마음이 가벼워졌어 🍃",
+                    "힘들었던 오늘을 이렇게 마무리하자 🌅",
+                    "불안한 마음을 하늘에 맡기고 가자 🤗"
+                ],
+                high: [
+                    "있는 그대로의 내 모습이 예뻐 🌈",
+                    "오늘 하루도 잘 버텨냈어, 수고했어 ☁️",
+                    "내가 너의 가장 큰 응원자야 ❤️"
+                ],
+                perfect: [
+                    "내일은 오늘보다 더 좋은 날이 될 거야 🌟",
+                    "나를 소중하게 생각하는 사람이 여기 있어 ✨",
+                    "힘들어도 잘 견디고 있는 나에게 박수를 👏"
+                ]
+            };
+
+            let category;
+            if (power < 30) category = messages.low;
+            else if (power < 60) category = messages.medium;
+            else if (power < 80) category = messages.high;
+            else category = messages.perfect;
+
+            return category[Math.floor(Math.random() * category.length)];
+        }
+
+        // 메시지 표시
+        function showMessage(text) {
+            const messageEl = document.getElementById('message');
+            const messageText = document.getElementById('message-text');
+
+            messageText.textContent = text;
+            messageEl.classList.add('show');
+
+            setTimeout(() => {
+                messageEl.classList.remove('show');
+            }, 3500); // 더 오래 표시
+        }
+
+
+        // 애니메이션 루프
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 배경 (위에서 본 도시)
+            drawCityFromAbove();
+
+            // 비행기 그리기
+            drawAirplanes();
+
+            // 준비 중인 비행기 그리기 (맨 위에)
+            drawReadyPlane();
+
+            requestAnimationFrame(animate);
+        }
+
+        // 이미지들
+        let backgroundImage = null;
+        let planeImage = null;
+        let currentBackground = '옥상_노을';
+
+        // 이미지 로드
+        function loadImages() {
+            // 배경 이미지
+            loadBackgroundImage(currentBackground);
+
+            // 종이비행기 이미지
+            planeImage = new Image();
+            planeImage.src = 'image/종이비행기.png';
+            planeImage.onload = function() {
+                console.log('종이비행기 이미지 로드 완료:', planeImage.src);
+            };
+            planeImage.onerror = function(e) {
+                console.log('종이비행기 이미지 로드 실패:', planeImage.src);
+                console.error('오류:', e);
+                planeImage = null;
+            };
+            console.log('종이비행기 이미지 로드 시작:', planeImage.src);
+        }
+
+        // 배경 이미지 로드 함수
+        function loadBackgroundImage(bgName) {
+            backgroundImage = new Image();
+            backgroundImage.src = `image/${bgName}.png`;
+            backgroundImage.onload = function() {
+                console.log('배경 이미지 로드 완료:', backgroundImage.src);
+            };
+            backgroundImage.onerror = function(e) {
+                console.log('배경 이미지 로드 실패:', backgroundImage.src);
+                console.error('오류:', e);
+                backgroundImage = null;
+            };
+            console.log('배경 이미지 로드 시작:', backgroundImage.src);
+        }
+
+        // 배경 변경 함수
+        function changeBackground(bgName) {
+            currentBackground = bgName;
+            loadBackgroundImage(bgName);
+
+            // 버튼 활성화 상태 변경
+            document.querySelectorAll('.bg-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(`bg-${bgName === '옥상_노을' ? 'rooftop' : bgName === '바다' ? 'sea' : 'office'}`).classList.add('active');
+
+            // 높이 정보 업데이트
+            const heightElement = document.getElementById('current-height');
+            switch(bgName) {
+                case '옥상_노을':
+                    heightElement.textContent = '옥상';
+                    break;
+                case '바다':
+                    heightElement.textContent = '해변';
+                    break;
+                case '사무실':
+                    heightElement.textContent = '사무실';
+                    break;
+            }
+        }
+
+        // 도시를 위에서 본 모습
+        function drawCityFromAbove() {
+            if (backgroundImage && backgroundImage.complete) {
+                // 이미지를 캔버스 전체에 맞춤
+                ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+            } else {
+                // 기본 배경 (이미지 로드 실패시)
+                const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.4);
+                skyGradient.addColorStop(0, '#FF6B6B');
+                skyGradient.addColorStop(0.3, '#FFB347');
+                skyGradient.addColorStop(0.6, '#FFCC99');
+                skyGradient.addColorStop(1, '#87CEEB');
+                ctx.fillStyle = skyGradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height * 0.4);
+
+                // 구름 그리기
+                drawClouds();
+
+                // 옥상과 도시 배경 (더 낮게)
+                const groundGradient = ctx.createLinearGradient(0, canvas.height * 0.6, 0, canvas.height);
+                groundGradient.addColorStop(0, '#8B7355');
+                groundGradient.addColorStop(0.1, '#A0826D');
+                groundGradient.addColorStop(0.3, '#6B5B45');
+                groundGradient.addColorStop(1, '#4A4035');
+                ctx.fillStyle = groundGradient;
+                ctx.fillRect(0, canvas.height * 0.6, canvas.width, canvas.height * 0.4);
+
+                // 옥상 타일 패턴
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.lineWidth = 1;
+
+                // 옥상 영역에만 타일 (더 아래쪽에)
+                for (let x = 0; x < canvas.width; x += 40) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, canvas.height * 0.65);
+                    ctx.lineTo(x, canvas.height);
+                    ctx.stroke();
+                }
+
+                for (let y = canvas.height * 0.65; y < canvas.height; y += 40) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                    ctx.stroke();
+                }
+
+                // 옥상 난간
+                ctx.fillStyle = '#666';
+                ctx.fillRect(0, canvas.height * 0.62, canvas.width, 5);
+                ctx.fillRect(0, canvas.height * 0.62, 5, canvas.height);
+                ctx.fillRect(canvas.width - 5, canvas.height * 0.62, 5, canvas.height);
+
+                // 도시 스카이라인 (멀리 보이는 건물들)
+                drawDistantCity();
+
+                // 옥상 위 오브젝트들
+                drawRooftopObjects();
+            }
+        }
+
+        // 구름 그리기 (고정 위치)
+        function drawClouds() {
+            const clouds = [
+                { x: canvas.width * 0.2, y: 80 },
+                { x: canvas.width * 0.5, y: 60 },
+                { x: canvas.width * 0.7, y: 100 },
+                { x: canvas.width * 0.9, y: 70 },
+                { x: canvas.width * 0.1, y: 120 }
+            ];
+
+            clouds.forEach(cloud => {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.beginPath();
+                ctx.arc(cloud.x, cloud.y, 30, 0, Math.PI * 2);
+                ctx.arc(cloud.x - 20, cloud.y, 25, 0, Math.PI * 2);
+                ctx.arc(cloud.x + 20, cloud.y, 25, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // 멀리 보이는 도시 (고정 건물들)
+        function drawDistantCity() {
+            // 미리 정의된 건물 높이들
+            const buildingHeights = [45, 70, 55, 85, 60, 90, 40, 65, 80, 50];
+
+            buildingHeights.forEach((height, i) => {
+                const x = i * (canvas.width / 10);
+                const y = canvas.height * 0.6 - height;
+                const width = canvas.width / 12;
+
+                // 건물 실루엣
+                ctx.fillStyle = 'rgba(50, 50, 70, 0.3)';
+                ctx.fillRect(x, y, width, height);
+
+                // 건물 창문 불빛 (고정)
+                ctx.fillStyle = 'rgba(255, 255, 150, 0.5)';
+                const windowPattern = [
+                    [1, 0, 1],
+                    [0, 1, 0],
+                    [1, 1, 1],
+                    [0, 0, 1]
+                ];
+
+                for (let j = 0; j < 3; j++) {
+                    for (let k = 0; k < Math.floor(height / 15) && k < 4; k++) {
+                        if (windowPattern[k] && windowPattern[k][j]) {
+                            ctx.fillRect(
+                                x + 5 + j * 10,
+                                y + 5 + k * 15,
+                                5,
+                                5
+                            );
+                        }
+                    }
+                }
+            });
+        }
+
+        // 옥상 오브젝트들
+        function drawRooftopObjects() {
+            // 화분들 (위치 조정)
+            const plants = [
+                { x: 100, y: canvas.height * 0.8 },
+                { x: 300, y: canvas.height * 0.75 },
+                { x: canvas.width - 200, y: canvas.height * 0.85 }
+            ];
+
+            plants.forEach(plant => {
+                // 화분
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(plant.x - 25, plant.y, 50, 40);
+
+                // 식물
+                ctx.fillStyle = '#228B22';
+                ctx.beginPath();
+                ctx.moveTo(plant.x, plant.y);
+                ctx.lineTo(plant.x - 20, plant.y - 30);
+                ctx.lineTo(plant.x, plant.y - 20);
+                ctx.lineTo(plant.x + 20, plant.y - 35);
+                ctx.lineTo(plant.x, plant.y - 15);
+                ctx.closePath();
+                ctx.fill();
+            });
+
+            // 벤치 (위치 조정)
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(canvas.width / 2 - 80, canvas.height * 0.9, 160, 10);
+            ctx.fillRect(canvas.width / 2 - 70, canvas.height * 0.9 + 10, 10, 20);
+            ctx.fillRect(canvas.width / 2 + 60, canvas.height * 0.9 + 10, 10, 20);
+        }
+
+        // 하늘 그리기
+        function drawSky() {
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+
+            if (timeOfDay > 0.6 && timeOfDay < 0.8) {
+                // 노을
+                gradient.addColorStop(0, '#FFB347');
+                gradient.addColorStop(0.3, '#FFCC99');
+                gradient.addColorStop(0.7, '#87CEEB');
+                gradient.addColorStop(1, '#B0E0E6');
+            } else if (timeOfDay > 0.3 && timeOfDay <= 0.6) {
+                // 낮
+                gradient.addColorStop(0, '#87CEEB');
+                gradient.addColorStop(1, '#E0F6FF');
+            } else {
+                // 밤
+                gradient.addColorStop(0, '#0C1445');
+                gradient.addColorStop(1, '#183059');
+            }
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // 별 그리기
+        function drawStars() {
+            stars.forEach(star => {
+                star.twinkle += 0.05;
+                const brightness = Math.sin(star.twinkle) * 0.5 + 0.5;
+
+                ctx.fillStyle = `rgba(255, 255, 255, ${brightness * 0.8})`;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // 새 그리기
+        function drawBirds() {
+            birds.forEach(bird => {
+                bird.x += bird.vx;
+                bird.y += Math.sin(Date.now() * 0.001 + bird.wingPhase) * 0.5;
+
+                if (bird.x > canvas.width + 20) {
+                    bird.x = -20;
+                    bird.y = Math.random() * (canvas.height * 0.4);
+                }
+
+                ctx.save();
+                ctx.translate(bird.x, bird.y);
+
+                ctx.fillStyle = '#333';
+
+                // 몸통
+                ctx.beginPath();
+                ctx.ellipse(0, 0, bird.size, bird.size * 0.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 날개
+                const wingAngle = Math.sin(Date.now() * 0.01 + bird.wingPhase) * 0.3;
+
+                ctx.beginPath();
+                ctx.moveTo(-bird.size, 0);
+                ctx.lineTo(-bird.size * 2, -bird.size * Math.sin(wingAngle));
+                ctx.lineTo(-bird.size, -bird.size * 0.3);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(bird.size, 0);
+                ctx.lineTo(bird.size * 2, -bird.size * Math.sin(wingAngle));
+                ctx.lineTo(bird.size, -bird.size * 0.3);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.restore();
+            });
+        }
+
+        // 건물 그리기
+        function drawBuildings() {
+            buildings.forEach(building => {
+                // 건물 본체
+                ctx.fillStyle = building.color;
+                ctx.fillRect(
+                    building.x,
+                    canvas.height - building.height,
+                    building.width,
+                    building.height
+                );
+
+                // 창문
+                building.windows.forEach(window => {
+                    if (window.lit) {
+                        ctx.fillStyle = 'rgba(255, 255, 150, 0.8)';
+                    } else {
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                    }
+
+                    ctx.fillRect(
+                        building.x + window.x,
+                        canvas.height - building.height + window.y,
+                        15,
+                        20
+                    );
+                });
+            });
+        }
+
+        // 옥상 그리기
+        function drawRooftop() {
+            // 옥상 바닥
+            const rooftopY = canvas.height * 0.7;
+
+            ctx.fillStyle = '#8B7355';
+            ctx.fillRect(0, rooftopY, canvas.width, canvas.height - rooftopY);
+
+            // 옥상 타일
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.lineWidth = 1;
+
+            for (let x = 0; x < canvas.width; x += 50) {
+                ctx.beginPath();
+                ctx.moveTo(x, rooftopY);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+
+            for (let y = rooftopY; y < canvas.height; y += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+
+            // 난간
+            ctx.fillStyle = '#666';
+            ctx.fillRect(0, rooftopY - 5, canvas.width, 5);
+
+            // 난간 기둥
+            for (let x = 0; x < canvas.width; x += 100) {
+                ctx.fillRect(x, rooftopY - 50, 5, 50);
+            }
+
+            // 화분들
+            drawPlants();
+        }
+
+        // 화분 그리기
+        function drawPlants() {
+            const plants = [
+                { x: 100, y: canvas.height * 0.7 - 30 },
+                { x: 250, y: canvas.height * 0.7 - 30 },
+                { x: canvas.width - 150, y: canvas.height * 0.7 - 30 }
+            ];
+
+            plants.forEach(plant => {
+                // 화분
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(plant.x - 20, plant.y, 40, 30);
+
+                // 식물
+                ctx.fillStyle = '#228B22';
+                ctx.beginPath();
+                ctx.moveTo(plant.x, plant.y);
+                ctx.lineTo(plant.x - 15, plant.y - 20);
+                ctx.lineTo(plant.x, plant.y - 15);
+                ctx.lineTo(plant.x + 15, plant.y - 25);
+                ctx.lineTo(plant.x, plant.y - 10);
+                ctx.closePath();
+                ctx.fill();
+            });
+        }
+
+        // 준비 중인 비행기 그리기
+        function drawReadyPlane() {
+            if (!readyPlane) return;
+
+            // 손 떨림 효과
+            readyPlane.wobble += 0.1;
+            const wobbleX = Math.sin(readyPlane.wobble) * 5;
+            const wobbleY = Math.sin(readyPlane.wobble * 1.5) * 3;
+
+            // 파워 표시 (비행기 크기 변화)
+            const powerScale = 1 + (holdPower / 100) * 0.3;
+
+            ctx.save();
+            ctx.translate(readyPlane.x + wobbleX, readyPlane.y + wobbleY);
+            ctx.scale(powerScale, powerScale);
+
+            // 그림자 효과
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            ctx.shadowBlur = 30;
+            ctx.shadowOffsetY = 20;
+
+            // 종이비행기 그리기
+            if (planeImage && planeImage.complete) {
+                // 이미지로 그리기
+                const imageSize = readyPlane.size * 1.5;
+                ctx.drawImage(
+                    planeImage,
+                    -imageSize / 2,
+                    -imageSize / 2,
+                    imageSize,
+                    imageSize
+                );
+            } else {
+                // 기본 도형으로 그리기 (이미지 로드 실패시)
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+                ctx.strokeStyle = 'rgba(100, 100, 100, 0.8)';
+                ctx.lineWidth = 3;
+
+                // 비행기 몸체 (위에서 본 모습)
+                ctx.beginPath();
+                ctx.moveTo(0, -readyPlane.size);
+                ctx.lineTo(-readyPlane.size * 0.7, readyPlane.size * 0.8);
+                ctx.lineTo(0, readyPlane.size * 0.3);
+                ctx.lineTo(readyPlane.size * 0.7, readyPlane.size * 0.8);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // 중앙 접힌 선
+                ctx.beginPath();
+                ctx.moveTo(0, -readyPlane.size);
+                ctx.lineTo(0, readyPlane.size * 0.5);
+                ctx.stroke();
+
+                // 날개 접힌 선
+                ctx.beginPath();
+                ctx.moveTo(-readyPlane.size * 0.5, 0);
+                ctx.lineTo(0, readyPlane.size * 0.3);
+                ctx.lineTo(readyPlane.size * 0.5, 0);
+                ctx.stroke();
+            }
+
+            // 파워 게이지
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = `rgba(255, ${255 - holdPower * 2}, 0, 0.8)`;
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.arc(0, 0, readyPlane.size * 1.2, 0, (Math.PI * 2 * holdPower) / 100);
+            ctx.stroke();
+
+            // 파워 텍스트
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${Math.floor(holdPower)}%`, 0, -readyPlane.size - 20);
+
+            ctx.restore();
+        }
+
+        // 비행기 그리기
+        function drawAirplanes() {
+            for (let i = airplanes.length - 1; i >= 0; i--) {
+                const plane = airplanes[i];
+
+                // 발사 애니메이션
+                if (plane.launching) {
+                    plane.size *= 0.98;
+                    if (plane.size < 10) {
+                        plane.size = 10;
+                        plane.launching = false;
+                    }
+                }
+
+                // 포물선 물리 업데이트
+                const timeFlying = (Date.now() - plane.thrown) / 1000; // 비행 시간(초)
+
+                // 공기저항 (시간이 지날수록 더 많이 감소)
+                plane.vy *= (0.98 - timeFlying * 0.002);
+                plane.vx *= (0.99 - timeFlying * 0.001);
+
+                // 포물선 중력 (시간에 따라 가속도적으로 증가)
+                plane.vz -= 0.12 + timeFlying * 0.03;
+
+                // 부드러운 비행 패턴 (앞으로 나가는 느낌 유지)
+                plane.swayPhase += plane.swaySpeed;
+                plane.spiralPhase += plane.spiralSpeed;
+
+                // 부드러운 좌우 흔들림 (시간이 지날수록 줄어듦)
+                const swayDecay = Math.max(0.1, 1 - timeFlying * 0.3);
+                const sway = Math.sin(plane.swayPhase) * plane.swayIntensity * swayDecay;
+                plane.vx += sway * 0.03;
+
+                // 자연스러운 상하 웨이브 (시간이 지날수록 줄어듦)
+                const waveDecay = Math.max(0.1, 1 - timeFlying * 0.2);
+                const wave = Math.cos(plane.spiralPhase) * 0.15 * waveDecay;
+                plane.vy += wave * 0.03;
+
+                // 좌우 속도 제한 (시간이 지날수록 더 제한)
+                const speedLimit = Math.max(1, 3 - timeFlying);
+                plane.vx = Math.max(-speedLimit, Math.min(speedLimit, plane.vx));
+
+                plane.x += plane.vx;
+                plane.y += plane.vy;
+                plane.z += plane.vz;
+
+                // 높이가 0 이하가 되면 땅에 떨어짐
+                if (plane.z <= 0) {
+                    plane.z = 0;
+                    plane.vy *= 0.5;
+                    plane.vx *= 0.8;
+                }
+
+                // 거리 계산
+                const flightDistance = Math.abs(canvas.height - 80 - plane.y);
+                plane.distance = Math.floor(flightDistance / 3);
+
+                if (plane.distance > bestDistance) {
+                    bestDistance = plane.distance;
+                    document.getElementById('best-distance').textContent = bestDistance + 'm';
+                }
+
+                // 꼬리 추가
+                plane.trail.push({ x: plane.x, y: plane.y, size: plane.size });
+                if (plane.trail.length > 15) {
+                    plane.trail.shift();
+                }
+
+                // 꼬리 그리기
+                ctx.strokeStyle = `rgba(255, 255, 255, 0.3)`;
+                plane.trail.forEach((point, index) => {
+                    if (index > 0) {
+                        ctx.lineWidth = (index / plane.trail.length) * 3;
+                        ctx.beginPath();
+                        ctx.moveTo(plane.trail[index - 1].x, plane.trail[index - 1].y);
+                        ctx.lineTo(point.x, point.y);
+                        ctx.stroke();
+                    }
+                });
+
+                // 그림자
+                const shadowScale = 1 - (plane.z / 200);
+                ctx.fillStyle = `rgba(0, 0, 0, ${shadowScale * 0.3})`;
+                ctx.beginPath();
+                ctx.ellipse(
+                    plane.x,
+                    plane.y + plane.z,
+                    plane.size * shadowScale,
+                    plane.size * shadowScale * 0.3,
+                    0, 0, Math.PI * 2
+                );
+                ctx.fill();
+
+                // 종이비행기 그리기 (위에서 본 모습)
+                const displaySize = plane.size * (1 + plane.z / 100) * (0.5 + plane.opacity * 0.5);
+
+                ctx.save();
+                ctx.translate(plane.x, plane.y);
+
+                // 흔들림 효과 (페이드아웃과 함께 줄어듦)
+                const wobbleIntensity = plane.opacity * 0.1;
+                const wobble = Math.sin(Date.now() * 0.01 + plane.thrown) * wobbleIntensity;
+                ctx.rotate(wobble);
+
+                // 투명도에 따른 색상 조정
+                const alpha = Math.max(0, Math.min(1, plane.opacity));
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                ctx.strokeStyle = `rgba(100, 100, 100, ${alpha * 0.8})`;
+                ctx.lineWidth = Math.max(0.5, displaySize / 20);
+
+                // 비행기 모양 (이미지 또는 기본 도형)
+                if (planeImage && planeImage.complete) {
+                    // 이미지로 그리기
+                    ctx.globalAlpha = alpha;
+                    ctx.drawImage(
+                        planeImage,
+                        -displaySize / 2,
+                        -displaySize / 2,
+                        displaySize,
+                        displaySize
+                    );
+                    ctx.globalAlpha = 1;
+                } else {
+                    // 기본 도형으로 그리기 (이미지 로드 실패시)
+                    ctx.beginPath();
+                    ctx.moveTo(0, -displaySize);
+                    ctx.lineTo(-displaySize * 0.6, displaySize * 0.7);
+                    ctx.lineTo(0, displaySize * 0.2);
+                    ctx.lineTo(displaySize * 0.6, displaySize * 0.7);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // 중앙 접힌 선
+                    ctx.beginPath();
+                    ctx.moveTo(0, -displaySize);
+                    ctx.lineTo(0, displaySize * 0.2);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+
+                // 비행 시간 체크 (10초 이상 지나면 강제 제거)
+                const flightTime = (Date.now() - plane.thrown) / 1000;
+                if (flightTime > 10) {
+                    plane.opacity -= 0.05; // 10초 후엔 빠르게 사라짐
+                }
+
+                // 점진적 페이드 아웃 시스템
+                const fadeDistance = Math.sqrt(
+                    Math.pow(plane.x - canvas.width / 2, 2) +
+                    Math.pow(plane.y - (canvas.height - 80), 2)
+                );
+
+                // 거리와 높이에 따른 페이드 아웃 (더 적극적으로)
+                if (plane.y < canvas.height * 0.3) {
+                    plane.opacity -= 0.015; // 화면 상단에서 빠르게 사라짐
+                } else if (plane.y < canvas.height * 0.5) {
+                    plane.opacity -= 0.010; // 중간 높이에서도 빠르게
+                } else if (plane.y < canvas.height * 0.7) {
+                    plane.opacity -= 0.006;
+                } else if (fadeDistance > 250) {
+                    plane.opacity -= 0.004; // 거리 임계값 낮춤
+                }
+
+                // 땅에 떨어지면 더 빨리 사라짐
+                if (plane.z <= 0 && plane.y > canvas.height * 0.7) {
+                    plane.opacity -= 0.03; // 더 빠르게 사라짐
+                }
+
+                // 화면 밖으로 나간 비행기도 빠르게 제거
+                if (plane.x < -100 || plane.x > canvas.width + 100 ||
+                    plane.y < -50 || plane.y > canvas.height + 50) {
+                    plane.opacity -= 0.02;
+                }
+
+                // 아주 작아지거나 거의 투명해지면 강제 제거
+                if (plane.size < 5 || plane.opacity <= 0.01) {
+                    airplanes.splice(i, 1);
+                    continue;
+                }
+
+                // 완전히 투명해지거나 화면 밖으로 나가면 제거 (범위 확대)
+                if (plane.opacity <= 0 ||
+                    plane.y < -150 ||
+                    plane.x < -300 ||
+                    plane.x > canvas.width + 300 ||
+                    plane.y > canvas.height + 100) {
+                    airplanes.splice(i, 1);
+                    continue;
+                }
+            }
+        }
+
+        // 음악 토글
+        function toggleMusic() {
+            const btn = document.getElementById('music-btn');
+            const audio = document.getElementById('backgroundMusic');
+            musicPlaying = !musicPlaying;
+
+            if (musicPlaying) {
+                btn.textContent = '🎵 배경음악 OFF';
+                audio.play().catch(error => {
+                    console.log('오디오 재생 실패:', error);
+                    // 자동재생이 차단된 경우 사용자가 직접 클릭해야 함
+                    musicPlaying = false;
+                    btn.textContent = '🎵 배경음악 ON';
+                });
+            } else {
+                btn.textContent = '🎵 배경음악 ON';
+                audio.pause();
+            }
+        }
+
+        // 창 크기 조절
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // 시작
+        loadImages();
+        init();
+    </script>
+</body>
+</html>
